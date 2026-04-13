@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poznej rostlinu</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        background: #f0f4f0;
+    }
+
+    h1 { margin-bottom: 10px; }
+
+    .game-container {
+        max-width: 500px;
+        margin: auto;
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    img {
+        width: 100%;
+        height: auto;
+        max-height: 50vh;
+        object-fit: contain;
+        border-radius: 10px;
+        background: #eee;
+        transition: opacity 0.25s ease;
+    }
+
+    .answers {
+        margin-top: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    button {
+        padding: 12px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        background: #4CAF50;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:hover { background: #45a049; }
+
+    .result { margin-top: 10px; font-weight: bold; }
+
+    .end-screen { display: none; }
+
+    ul { text-align: left; }
+</style>
+</head>
+
+<body>
+
+<h1>Poznej rostlinu 🌿</h1>
+
+<div class="game-container" id="game">
+    <div class="score" id="score"></div>
+
+    <img id="plantImage" src="" alt="rostlina">
+
+    <div class="answers">
+        <button onclick="checkAnswer(0)" id="btn0"></button>
+        <button onclick="checkAnswer(1)" id="btn1"></button>
+        <button onclick="checkAnswer(2)" id="btn2"></button>
+    </div>
+
+    <div class="result" id="result"></div>
+</div>
+
+<div class="game-container end-screen" id="endScreen">
+    <h2>Konec hry</h2>
+    <p id="finalScore"></p>
+    <h3>Špatné odpovědi:</h3>
+    <ul id="wrongList"></ul>
+    <button onclick="restartGame()">Hrát znovu</button>
+</div>
+
+<script>
+const plants = [
+    { file: "blatouch", name: "Blatouch bahenní" },
+    { file: "bledule", name: "Bledule jarní" },
+    { file: "hluchavka-nach", name: "Hluchavka nachová" },
+    { file: "hrachor", name: "Hrachor jarní" },
+    { file: "konvalinka", name: "Konvalinka vonná" },
+    { file: "orsej", name: "Orsej jarní" },
+    { file: "pitulnik", name: "Pitulník žlutý" },
+    { file: "plicnik", name: "Plicník lékařský" },
+    { file: "prvosenka", name: "Prvosenka jarní" },
+    { file: "ptacinec", name: "Ptačinec prostřední" },
+    { file: "sasanka-hajni", name: "Sasanka hajní" },
+    { file: "sasanka-prysk", name: "Sasanka pryskyřníkovitá" },
+    { file: "violka", name: "Violka vonná" },
+    { file: "zbehovec", name: "Zběhovec plazivý" }
+];
+
+let gameSet = [];
+let currentIndex = 0;
+let correctPlant = null;
+let correctPosition = 0;
+let score = 0;
+let wrongAnswers = [];
+let locked = false;
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function startGame() {
+    gameSet = shuffle([...plants]);
+
+    currentIndex = 0;
+    score = 0;
+    wrongAnswers = [];
+
+    document.getElementById("game").style.display = "block";
+    document.getElementById("endScreen").style.display = "none";
+
+    newRound();
+}
+
+function newRound() {
+    if (currentIndex >= gameSet.length) {
+        endGame();
+        return;
+    }
+
+    locked = false;
+    document.getElementById("result").textContent = "";
+
+    correctPlant = gameSet[currentIndex];
+
+    const img = document.getElementById("plantImage");
+
+    // 🔥 fade out
+    img.style.opacity = 0;
+
+    const preload = new Image();
+    preload.src = "obrazky/" + correctPlant.file + ".png?v=" + Date.now();
+
+    preload.onload = () => {
+        setTimeout(() => {
+            img.src = preload.src;
+            img.style.opacity = 1;
+        }, 150);
+    };
+
+    let options = [correctPlant];
+
+    while (options.length < 3) {
+        let randomPlant = plants[Math.floor(Math.random() * plants.length)];
+        if (!options.includes(randomPlant)) {
+            options.push(randomPlant);
+        }
+    }
+
+    options = shuffle(options);
+
+    options.forEach((opt, i) => {
+        document.getElementById("btn" + i).textContent = opt.name;
+    });
+
+    correctPosition = options.indexOf(correctPlant);
+
+    updateScore();
+}
+
+function checkAnswer(index) {
+    if (locked) return;
+    locked = true;
+
+    const result = document.getElementById("result");
+
+    if (index === correctPosition) {
+        result.textContent = "✅ Správně!";
+        result.style.color = "green";
+        score++;
+    } else {
+        result.textContent = "❌ Špatně!";
+        result.style.color = "red";
+        wrongAnswers.push(correctPlant.name);
+    }
+
+    currentIndex++;
+
+    setTimeout(newRound, 700);
+}
+
+function updateScore() {
+    document.getElementById("score").textContent =
+        (currentIndex + 1) + " / " + gameSet.length;
+}
+
+function endGame() {
+    document.getElementById("game").style.display = "none";
+    document.getElementById("endScreen").style.display = "block";
+
+    document.getElementById("finalScore").textContent =
+        "Skóre: " + score + " / " + gameSet.length;
+
+    const list = document.getElementById("wrongList");
+    list.innerHTML = "";
+
+    if (wrongAnswers.length === 0) {
+        list.innerHTML = "<li>Žádné chyby 🎉</li>";
+        return;
+    }
+
+    wrongAnswers.forEach(name => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        list.appendChild(li);
+    });
+}
+
+function restartGame() {
+    startGame();
+}
+
+startGame();
+</script>
+
+</body>
+</html>
